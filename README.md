@@ -8,7 +8,9 @@ In modern smart homes, optimizing energy usage while maintaining convenience is 
 
 ### **Real-World Impact**  
 The hallway light in my home often disrupts my sleep due to its brightness penetrating into my room. Manually turning it off requires me to get up and walk to the switch, which is inconvenient, especially if someone turns it back on later in the night, causing further disturbance. Additionally, the hallway light is primarily used for brief moments, such as when going to the bathroom or upstairs, making it inefficient to keep it on continuously.  
+
 To address this, the system will use a **motion sensor and light sensor** to ensure the hallway light **only turns on when needed**. When someone approaches and the ambient light level is low, the smart bulb will illuminate the hallway for a short duration before automatically switching off if no further motion is detected. This minimizes **energy waste** while maintaining **convenience and comfort**.  
+
 For **future enhancements**, a **camera module** can be integrated to improve motion detection accuracy and enable advanced features such as **AI-based movement recognition**, further optimizing the system’s responsiveness and security.
 
 The project follows an **IoT architecture**, integrating key layers:

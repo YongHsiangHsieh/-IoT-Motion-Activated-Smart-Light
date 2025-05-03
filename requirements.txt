@@ -1,0 +1,9 @@
+picamera>=1.13
+grove.py>=0.6
+tinytuya>=1.6.0
+face_recognition>=1.3.0
+numpy>=1.19.0
+# To install BlynkLib, run: sudo pip install https://bit.ly/3C0PMVY
+RPi.GPIO==0.7.1
+requests>=2.26.0
+python-dotenv>=0.19.0 

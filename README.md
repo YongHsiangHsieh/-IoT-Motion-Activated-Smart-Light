@@ -21,6 +21,9 @@ The project follows an **IoT architecture**, integrating key layers:
 3. **Gateway Layer** – Local Wi-Fi network (2.4GHz) connecting the Pi to smart light and cloud services
 4. **Application Layer** – Blynk cloud platform for remote monitoring and control
 
+## Systems Diagram
+![Screenshot 2025-05-04 at 10 16 34 a m](https://github.com/user-attachments/assets/3f01c45b-adac-477f-b9ef-e36324b3592d)
+
 ## Tools, Technologies, and Equipment
 
 ### **Hardware:**

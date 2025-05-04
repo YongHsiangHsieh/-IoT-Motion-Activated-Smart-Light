@@ -44,3 +44,17 @@ BLYNK_LIGHT_STATE_PIN = 0  # V0 - Light state (ON/OFF)
 BLYNK_COLOR_PIN = 1        # V1 - Current light color
 BLYNK_FACES_PIN = 2        # V2 - Recognized faces
 BLYNK_MODE_PIN = 3         # V3 - Mode selection (auto/manual) 
+
+# Supported RGB color values
+SUPPORTED_COLORS = {
+    "red": (255, 0, 0),
+    "green": (0, 255, 0),
+    "blue": (0, 0, 255),
+    "yellow": (255, 255, 0),
+    "cyan": (0, 255, 255),
+    "magenta": (255, 0, 255),
+    "white": (255, 255, 255),
+    "purple": (128, 0, 128),
+    "orange": (255, 165, 0),
+    "pink": (255, 192, 203)
+}

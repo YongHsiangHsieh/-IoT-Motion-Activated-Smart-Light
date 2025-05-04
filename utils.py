@@ -14,18 +14,27 @@ def get_timestamp():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-def generate_filename(prefix, extension="jpg"):
+def generate_filename(prefix="", name=None, color=None, directory=".", extension="jpg"):
     """Generate a filename with the current timestamp.
     
     Args:
-        prefix: Prefix for the filename
+        prefix: Prefix for the filename (used if name and color are not provided)
+        name: Name to include in the filename
+        color: Favorite color to include in the filename
+        directory: Directory where the file should be saved
         extension: File extension (without the dot)
         
     Returns:
-        str: Generated filename
+        str: Full path to the generated filename
     """
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return f"{prefix}_{timestamp}.{extension}"
+
+    if name and color:
+        filename = f"{name}_{color}_{timestamp}.{extension}"
+    else:
+        filename = f"{prefix}_{timestamp}.{extension}"
+
+    return os.path.join(directory, filename)
 
 
 def safe_delete_file(file_path):

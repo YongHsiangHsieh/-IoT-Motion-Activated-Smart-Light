@@ -231,20 +231,6 @@ class SecuritySystem:
         Args:
             color_name: Name of the color to set
         """
-        # Dictionary of common colors (RGB)
-        colors = {
-            "red": (255, 0, 0),
-            "green": (0, 255, 0),
-            "blue": (0, 0, 255),
-            "yellow": (255, 255, 0),
-            "cyan": (0, 255, 255),
-            "magenta": (255, 0, 255),
-            "white": (255, 255, 255),
-            "purple": (128, 0, 128),
-            "orange": (255, 165, 0),
-            "pink": (255, 192, 203)
-        }
-        
-        # Use the color mapping if available, otherwise default to blue
-        color = colors.get(color_name.lower(), (100, 100, 0))
-        self.bulb.set_color(*color) 
+        # Use the centralized color mapping from config
+        color = config.SUPPORTED_COLORS.get(color_name.lower(), (100, 100, 100))
+        self.bulb.set_color(*color)

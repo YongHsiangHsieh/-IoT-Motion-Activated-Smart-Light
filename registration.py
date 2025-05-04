@@ -8,7 +8,9 @@ later recognition by the security system.
 
 import time
 import sys
+import os
 import config
+from config import SUPPORTED_COLORS
 from camera_manager import CameraManager
 from face_recognition_service import FaceRecognitionService
 from utils import generate_filename
@@ -38,20 +40,18 @@ def main():
             print("Name cannot be empty.")
             return
         
+        valid_colors = list(SUPPORTED_COLORS.keys())
+        print("\nAvailable colors:")
+        print(", ".join(valid_colors))
         favorite_color = input("Enter your favorite color: ").strip().lower()
-        valid_colors = ["red", "green", "blue", "yellow", "cyan", "magenta", 
-                      "white", "purple", "orange", "pink"]
         
         if not favorite_color:
             print("Color cannot be empty.")
             return
         
         if favorite_color not in valid_colors:
-            print(f"Warning: '{favorite_color}' is not in the list of recognized colors: {', '.join(valid_colors)}")
-            print("The system will use this color but it may default to blue if not recognized.")
-            confirm = input("Continue with this color? (y/n): ").strip().lower()
-            if confirm != 'y':
-                return
+            print(f"'{favorite_color}' is not a recognized color. Please choose from the available list.")
+            return
         
         # Capture user's face
         print("\nPreparing to capture your face...")
@@ -63,7 +63,7 @@ def main():
             time.sleep(1)
         
         # Capture the image
-        image_path = generate_filename(f"registration")
+        image_path = generate_filename(name=name, color=favorite_color, directory=config.REGISTERED_FACES_DIR)
         if not camera.capture_image(image_path):
             print("Failed to capture image. Registration cannot proceed.")
             return
@@ -78,6 +78,9 @@ def main():
         else:
             print("\n❌ Registration failed.")
             print("Please try again, ensuring your face is clearly visible to the camera.")
+            if os.path.exists(image_path):
+                os.remove(image_path)
+                print("The captured image has been deleted due to failed registration.")
     
     except KeyboardInterrupt:
         print("\nRegistration canceled.")
@@ -90,4 +93,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

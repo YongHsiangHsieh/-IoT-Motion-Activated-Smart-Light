@@ -147,7 +147,7 @@ class FaceRecognitionService:
         """Register a new face with the given name and favorite color.
         
         Args:
-            image_path: Path to the image with the face to register
+            image_path: Path to the already saved image with the face
             name: Name of the person
             favorite_color: Favorite color of the person
             
@@ -162,16 +162,7 @@ class FaceRecognitionService:
             if not encodings:
                 print("No face detected in the provided image")
                 return False
-            
-            # Create a new file for the registered face
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            new_filename = f"{name}_{favorite_color}_{timestamp}.jpg"
-            new_path = os.path.join(config.REGISTERED_FACES_DIR, new_filename)
-            
-            # Copy the image to the registered faces directory
-            import shutil
-            shutil.copy2(image_path, new_path)
-            
+
             print(f"Face registered successfully as {name} with favorite color {favorite_color}")
             return True
         except Exception as e:

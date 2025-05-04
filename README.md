@@ -92,7 +92,7 @@ The system operates with the following workflow:
 
 1. **Install Required Packages:**
    ```bash
-   git clone https://github.com/yourusername/IoT-Motion-Smart-Light.git
+   git clone https://github.com/YongHsiangHsieh/IoT-Motion-Smart-Light.git
    cd IoT-Motion-Smart-Light
    pip install -r requirements.txt
    sudo pip install https://bit.ly/3C0PMVY  # Install BlynkLib
@@ -111,13 +111,7 @@ The system operates with the following workflow:
    BLYNK_TEMPLATE_NAME=Smart lighting system
    ```
 
-3. **Obtain Tuya Device Credentials:**
-   - To get your Tuya device credentials (DEVICE_ID, DEVICE_IP, LOCAL_KEY), you can use the [Tuya IoT Platform](https://iot.tuya.com/) or the [tinytuya wizard](https://github.com/jasonacox/tinytuya#setup-wizard):
-     ```bash
-     python -m tinytuya wizard
-     ```
-
-4. **Set Up Blynk:**
+3. **Set Up Blynk:**
    - Create a Blynk account at [blynk.io](https://blynk.io/)
    - Create a new template with the following virtual pins:
      - V0: Light state (ON/OFF)
@@ -126,10 +120,52 @@ The system operates with the following workflow:
      - V3: Mode selection (auto/manual)
    - Get your BLYNK_TEMPLATE_ID and BLYNK_AUTH_TOKEN from the Blynk console
 
-5. **Create Required Directories:**
+4. **Create Required Directories:**
    ```bash
    mkdir -p registered_faces
    ```
+
+
+### **Obtain Tuya Device Credentials**
+
+To control your smart light bulb via the local network, you need to retrieve its unique credentials. Follow these steps:
+
+1. **Set up the light bulb using the Smart Life app:**
+   - Download and install the **Smart Life** app on your phone.
+   - Ensure your phone is connected to the same **2.4GHz Wi-Fi network** as your Raspberry Pi.
+   - Add the smart light bulb to the app by following the pairing instructions and entering your Wi-Fi password.
+
+2. **Create and configure a Tuya IoT Cloud project:**
+   - Go to the [Tuya IoT Platform](https://iot.tuya.com/) and sign up for an account.
+   - Create a new cloud project.
+   - Select **"Smart Home"** as the development type and choose **EU** as the data center region.
+   - Enable required APIs such as **Device Status Notification**, **Device Control**, and **Device Management**.
+
+3. **Link your Smart Life app to the Tuya IoT platform:**
+   - In the Tuya Cloud project, go to **Devices > Link Tuya App Account**.
+   - A QR code will appear. Open the Smart Life app, navigate to **Me > Developer Mode** and scan the QR code.
+   - Once linked, the devices from your Smart Life app will appear in your cloud project.
+
+4. **Retrieve device credentials:**
+   - In the Tuya IoT platform, under your project’s **Devices** section, locate your light bulb.
+   - Note down the **Device ID**, **Local IP Address**, and **Local Key**.
+
+5. **Use `tinytuya` to verify credentials on your Raspberry Pi:**
+   - Run the wizard on your Pi:
+     ```bash
+     tinytuya wizard
+     ```
+   - Paste the credentials when prompted.
+   - The wizard will verify the device and confirm it is working.
+
+6. **Configure your environment:**
+   - Open the `.env` file and paste the following with your actual values:
+     ```
+     DEVICE_ID=your_tuya_device_id
+     DEVICE_IP=your_tuya_device_ip
+     LOCAL_KEY=your_tuya_local_key
+     ```
+   - Save the file. Your smart light bulb is now fully integrated and ready to be controlled locally!
 
 ## **Usage**
 
@@ -205,17 +241,26 @@ The modular design makes it easy to add new hardware components:
    - Double-check DEVICE_ID, DEVICE_IP, and LOCAL_KEY in the .env file
    - Ensure port 6668 is open for local Tuya communication
 
-2. **Face Recognition Problems:**
+2. **Bulb IP Address Changes:**
+   - Since the IP address of the smart bulb is assigned via DHCP, it may change over time.
+   - To find the current IP address, run the following command on your Raspberry Pi:
+     ```bash
+     tinytuya scan
+     ```
+   - This will list all Tuya devices on your local network. Locate your device using the DEVICE_ID and note the updated IP address.
+   - Update the `.env` file with the new IP address under `DEVICE_IP=`.
+
+3. **Face Recognition Problems:**
    - Improve lighting conditions during registration
    - Re-register with multiple angles for better recognition
    - Adjust FACE_RECOGNITION_THRESHOLD in config.py (lower = stricter)
 
-3. **Motion Detection Issues:**
+4. **Motion Detection Issues:**
    - Verify the PIR sensor is properly connected
    - Adjust the sensor position for better coverage
    - Check the sensor's sensitivity with a voltmeter
 
-4. **Blynk Connectivity:**
+5. **Blynk Connectivity:**
    - Verify your AUTH_TOKEN is correct
    - Ensure the Raspberry Pi has internet access
    - Check for firewall restrictions
@@ -241,3 +286,45 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Tuya device control via [tinytuya](https://github.com/jasonacox/tinytuya)
 - IoT connectivity provided by [Blynk](https://blynk.io/)
 
+## Development Insights and Decisions
+
+During the development of the facial recognition component, I initially intended to implement it locally for better performance and enhanced security—keeping facial data off the internet. After researching local face recognition solutions for the Raspberry Pi 4, I narrowed down three viable options:
+
+1. **Dlib’s Face Recognition via `face_recognition` Library**
+2. **OpenCV’s YuNet (for face detection) + SFace (for recognition)**
+3. **Classical LBPH (Local Binary Patterns Histograms) Approach**
+
+I chose the OpenCV approach using YuNet and SFace because of several advantages:
+- Optimized for edge devices
+- Pre-trained models and real-time performance
+- Efficient processing pipeline
+- High flexibility for integration
+
+However, I encountered issues with incompatible OpenCV versions when trying to use YuNet on the Raspberry Pi 4. Despite attempting various workarounds, the hardware and software constraints of the Pi made this approach unfeasible.
+
+As a result, I opted to use the `face_recognition` library, which is built on Dlib. Although this method is considered relatively heavy for a Raspberry Pi, it turned out to perform reliably without any noticeable issues during testing. This experience highlighted the importance of balancing system capabilities with implementation goals, and I learned to remain flexible and adaptive in choosing the right tools based on real-world constraints.
+
+## Blynk Integration Journey
+
+While integrating Blynk into the system, I initially chose not to follow the lab instructions. Instead, I tried using `blynklib>=0.2.6`—a newer-looking library that I thought would be more up-to-date. However, it didn't work as expected. I spent time troubleshooting the issue, suspecting it might be a problem with the template ID or Blynk configuration, but the system still failed to connect.
+
+Eventually, I reverted to the lab-provided method using a custom `BlynkLib.py` script (installed via a direct link). This worked perfectly. Through this process, I discovered that the `blynklib>=0.2.6` package hadn’t been maintained and lacked support for the newer Blynk IoT platform features or stable Legacy support.
+
+I also learned about the two versions of Blynk:
+
+- **Legacy Blynk** (released around 2015):
+  - Uses a raw TCP binary protocol (port 8442)
+  - No encryption by default
+  - Free to use
+  - Beginner-friendly and easy to hack with
+  - Think of it as the "Arduino IDE" of IoT—simple and accessible
+
+- **New Blynk IoT** (released in 2021):
+  - Uses HTTPS and secure WebSocket APIs (like MQTT under the hood)
+  - Supports TLS/SSL encryption
+  - Offers OAuth support and powerful new cloud features
+  - Designed for scalability, better security, and modern IoT needs
+  - Comes with tiered plans (Free, Plus, Pro, Business)
+  - More like the "VS Code + GitHub + CI/CD" of IoT—cloud-native and production-ready
+
+This journey helped me better understand Blynk’s evolution and its ecosystem, highlighting how project decisions must sometimes balance ease-of-use, reliability, and future scalability.

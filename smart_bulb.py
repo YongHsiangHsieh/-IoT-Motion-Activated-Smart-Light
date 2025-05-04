@@ -113,4 +113,4 @@ class SmartBulb:
         Returns:
             bool: True if successful, False otherwise
         """
-        return self.set_color(160, 82, 45) 
+        return self.set_color(255, 255, 255) 

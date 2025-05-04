@@ -22,7 +22,8 @@ The project follows an **IoT architecture**, integrating key layers:
 4. **Application Layer** – Blynk cloud platform for remote monitoring and control
 
 ## Systems Diagram
-![Screenshot 2025-05-04 at 10 16 34 a m](https://github.com/user-attachments/assets/3f01c45b-adac-477f-b9ef-e36324b3592d)
+![Screenshot 2025-05-04 at 10 25 44 a m](https://github.com/user-attachments/assets/1ee58686-0379-4cef-a5da-bb826662a120)
+
 
 ## Tools, Technologies, and Equipment
 

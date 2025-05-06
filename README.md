@@ -24,6 +24,8 @@ The project follows an **IoT architecture**, integrating key layers:
 ## System Diagram
 ![Screenshot 2025-05-04 at 10 25 44 a m](https://github.com/user-attachments/assets/1ee58686-0379-4cef-a5da-bb826662a120)
 
+## Demo Video
+https://youtu.be/ELm-J6DMwxA
 
 ## Tools, Technologies, and Equipment
 

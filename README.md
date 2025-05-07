@@ -153,7 +153,7 @@ To control your smart light bulb via the local network, you need to retrieve its
    - Once linked, the devices from your Smart Life app will appear in your cloud project.
 
 4. **Retrieve device credentials:**
-   - In the Tuya IoT platform, under your project’s **Devices** section, locate your light bulb.
+   - In the Tuya IoT platform, under your project's **Devices** section, locate your light bulb.
    - Note down the **Device ID**, **Local IP Address**, and **Local Key**.
 
 5. **Use `tinytuya` to verify credentials on your Raspberry Pi, making sure it's on the same 2.4GHz Wi-Fi network as the smart light bulb:**
@@ -271,6 +271,251 @@ The modular design makes it easy to add new hardware components:
    - Ensure the Raspberry Pi has internet access
    - Check for firewall restrictions
 
+## **Technical Implementation Details**
+
+### **Face Recognition Algorithm**
+
+After thorough testing of three different face recognition approaches, I implemented a custom "Relative Distance Check" algorithm that demonstrated superior accuracy and reliability:
+
+1. **Algorithm Comparison and Selection**
+   - **Original Min Distance Approach**: Basic distance threshold check
+   - **Built-in Compare_Faces Method**: face_recognition library's default method
+   - **Relative Distance Check**: Custom implementation with confidence gap analysis
+
+   The Relative Distance Check consistently performed best in cross-comparison testing with diverse lighting conditions, distances, and face angles.
+
+2. **How the Relative Distance Check Works**
+   ```python
+   # Calculate distances to all registered faces
+   distances = []
+   for i, reg_encoding in enumerate(registered_encodings):
+       distance = np.linalg.norm(face_encoding - reg_encoding)
+       distances.append((registered_info[i], distance))
+   
+   # Sort by distance (ascending)
+   sorted_distances = sorted(distances, key=lambda x: x[1])
+   
+   # Get the best match and calculate gap between best and second-best match
+   (best_name, best_color), best_distance = sorted_distances[0]
+   gap = sorted_distances[1][1] - best_distance
+   
+   # Apply threshold and gap criteria for confident recognition
+   if best_distance < self.threshold and gap >= self.min_gap:
+       # Recognition successful
+   ```
+
+3. **Mathematical Foundation**
+   - **Euclidean Distance**: The `np.linalg.norm()` function calculates the Euclidean (L2) distance between two 128-dimensional face encoding vectors
+   - **Confidence Threshold**: Lower distances indicate higher similarity (below 0.6 is considered a match)
+   - **Confidence Gap**: The difference between the best and second-best match provides a confidence measure
+   - **Dual Criteria**: Recognition requires both passing the absolute threshold AND having a sufficient gap to the next-best match
+
+   This approach significantly reduces false positives by ensuring the system only identifies faces when there's both a good match AND a clear distinction from other registered faces.
+
+### **Multi-Threading Architecture**
+
+The system employs a sophisticated multi-threading architecture to ensure responsive performance while handling concurrent operations:
+
+1. **Thread Organization**
+   - **Main Thread**: Coordinates the overall system workflow and processes sensor data
+   - **Face Recognition Thread**: Dedicated thread that processes video frames and performs computationally intensive facial recognition
+   - **Timer Threads**: Multiple timer threads manage time-sensitive operations like face recognition duration and bulb control
+
+2. **Thread Synchronization**
+   ```python
+   # Avoid race conditions with multiple detections
+   with self.lock:
+       self.motion_count += 1
+       # Event handling within the protected section
+   ```
+
+   A threading lock prevents race conditions when multiple motion events are detected in rapid succession, ensuring that state variables remain consistent.
+
+3. **Asynchronous Face Recognition**
+   ```python
+   # Start face recognition thread
+   face_thread = threading.Thread(
+       target=self._run_face_recognition, 
+       args=(count, face_recog_timer, bulb_timer)
+   )
+   face_thread.daemon = True
+   face_thread.start()
+   ```
+
+   By processing face recognition asynchronously, the main thread remains responsive to new events and can continue monitoring sensors, maintaining system reliability.
+
+4. **Blynk IoT Communication Thread**
+   ```python
+   # Start the Blynk thread
+   self.running = True
+   self.thread = threading.Thread(target=self._blynk_thread)
+   self.thread.daemon = True
+   self.thread.start()
+   ```
+
+   The Blynk service runs in its own dedicated daemon thread, enabling continuous communication with the Blynk cloud without blocking the main application. This architecture provides several crucial benefits:
+
+   - **Non-blocking Cloud Communication**: The Blynk thread continuously maintains the connection to the Blynk cloud and processes incoming commands, all without affecting the responsiveness of the main security system
+   
+   - **Event-Driven Mode Switching**: Mode changes from the Blynk app (auto/manual) are processed through event handlers:
+     ```python
+     @self.blynk.on("V" + str(config.BLYNK_MODE_PIN))
+     def handle_mode_write(value):
+         self._mode_write_handler(value)
+     ```
+   
+   - **State-Based Decision Making**: The main thread checks the current mode before responding to motion events, allowing remote control of system behavior without requiring direct thread communication:
+     ```python
+     # Check if we're in manual mode from Blynk
+     if self.blynk_service.get_operation_mode() == "manual":
+         print("System in manual mode - ignoring motion detection")
+         return
+     ```
+   
+   - **Asynchronous Dashboard Updates**: The Blynk thread periodically updates the mobile app dashboard with the latest system state, including light status, recognized users, and current operation mode
+   
+   This approach creates a clean separation between the IoT communication layer and the core security system logic, ensuring that network delays or cloud communication issues don't impact the system's ability to respond to local events.
+
+### **Video Processing Pipeline**
+
+The video processing pipeline efficiently extracts, analyzes, and processes video frames for face recognition:
+
+1. **Frame Acquisition and Processing**
+   ```python
+   # Process video frames until timer expires or a face is recognized
+   for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+       # Get the array from the frame
+       image = frame.array
+       
+       # Process the frame to recognize faces
+       results = self.face_service.process_frame(
+           image, 
+           self.registered_encodings, 
+           self.registered_info
+       )
+   ```
+
+   The PiCamera's video port provides a continuous stream of frames that are individually processed, enabling real-time face recognition.
+
+2. **Result Filtering and Selection**
+   ```python
+   # Filter strong matches only
+   strong_matches = [r for r in results if r[1] and r[3] < config.FACE_RECOGNITION_THRESHOLD]
+
+   if strong_matches:
+       # Choose the best (most confident) match among strong ones
+       best_match = min(strong_matches, key=lambda r: r[3])
+   ```
+
+   The system filters recognition results to include only strong matches, then selects the single best match based on confidence metrics.
+
+3. **Adaptive Recognition Strategy**
+   - The system attempts recognition for a configurable duration (default 30 seconds)
+   - Recognition stops immediately when a high-confidence match is found, conserving processing resources
+   - If no face is recognized within the time window, a security alert is triggered (red light)
+   - Face encodings are preloaded to improve performance but refreshed periodically (every 10 motion events) to ensure up-to-date recognition
+
+This intelligent video processing approach balances accuracy, performance, and resource utilization to deliver reliable face recognition even on the resource-constrained Raspberry Pi platform.
+
+### **Smart Bulb Control Implementation**
+
+The system uses the TinyTuya library to communicate with Tuya-compatible smart bulbs directly over the local network:
+
+1. **Protocol and Communication**
+   ```python
+   # Initialize the bulb connection
+   self.bulb = tinytuya.BulbDevice(self.device_id, self.ip_address, self.local_key)
+   self.bulb.set_version(3.5)  # Set protocol version for device communication
+   ```
+
+   The implementation uses the local control API (v3.5) that communicates directly with the device over your local network on port 6668 rather than through the cloud, minimizing latency and ensuring the system continues to work even during internet outages.
+
+2. **Command Structure**
+   ```python
+   # Color control example
+   def set_color(self, r, g, b):
+       try:
+           self.bulb.set_colour(r, g, b)
+           print(f"Bulb color set to RGB({r}, {g}, {b}).")
+           return True
+       except Exception as e:
+           print(f"Error while setting color: {e}")
+           return False
+   ```
+
+   The system handles various bulb commands through abstracted methods (turn_on, turn_off, set_color) that manage the underlying protocol details while providing a clean interface for the security system.
+
+3. **Reconnection Logic**
+   ```python
+   if not self.connected and not self.connect():
+       return False
+   ```
+
+   Every command automatically attempts to reestablish connection if the bulb is disconnected, providing resilience against temporary network issues.
+
+### **Error Handling Strategy**
+
+The system implements robust error handling throughout its architecture to ensure reliability in real-world conditions:
+
+1. **Graceful Degradation**
+   The system is designed to continue operating even when certain components fail:
+   
+   - If bulb connection fails, the system continues monitoring motion and performing face recognition
+   - If face recognition fails to detect any faces, the system defaults to security mode (red light)
+   - If the Blynk service disconnects, the system continues to function locally
+
+2. **Exception Management**
+   ```python
+   try:
+       # Operation code
+   except tinytuya.TuyaError as e:
+       print(f"Tuya Error: {e}")
+   except Exception as e:
+       print(f"Unexpected error: {e}")
+   ```
+
+   Component-specific exceptions (like TuyaError) are caught separately from general exceptions, allowing for specialized handling of different error types.
+
+3. **Network Resilience**
+   
+   - **Bulb Control**: The system maintains local control using TinyTuya, enabling bulb operation even when the internet is down
+   - **Reconnection Logic**: Each component attempts to reconnect when communication fails
+   - **Timeouts**: Operations that might block (like face recognition) are limited by configurable timeouts
+
+4. **User Feedback**
+   When errors occur, the system provides feedback through:
+   
+   - Console logging for troubleshooting
+   - Visual indicators (LED, bulb color) for user awareness
+   - Status updates to the Blynk dashboard when available
+
+This multi-layered error handling ensures the system remains operational and provides appropriate feedback even when faced with various failure scenarios.
+
+### **Security Considerations**
+
+The system implements several security measures to protect both user data and device operation:
+
+1. **Local Network Operation**
+   - The smart bulb control operates over the local network only, eliminating cloud-based vulnerabilities
+   - The Tuya protocol uses AES encryption for device commands, securing the communication channel
+   - Device credentials (Device ID, IP, Local Key) are stored in a separate .env file (excluded from version control)
+
+2. **User Data Protection**
+   - Face recognition encodings are stored locally on the Raspberry Pi
+   - No biometric data is sent to cloud services, preserving user privacy
+   - User preferences are stored alongside face encodings with simple file naming conventions for minimal overhead
+
+3. **Access Control**
+   - The system distinguishes between registered and unregistered users
+   - Only recognized faces trigger personalized responses (favorite colors)
+   - Unrecognized faces trigger alert mode (red light)
+
+4. **Restricted Scope**
+   - Component permissions are limited to required functions only
+   - The project follows separation of concerns principles, with each module having clearly defined responsibilities
+
+These security considerations make the system suitable for home environments where privacy and reliable operation are important, while keeping the solution accessible for educational purposes.
+
 ## **Future Enhancements**
 
 Potential improvements to the system include:
@@ -296,8 +541,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 During the development of the facial recognition component, I initially intended to implement it locally for better performance and enhanced security—keeping facial data off the internet. After researching local face recognition solutions for the Raspberry Pi 4, I narrowed down three viable options:
 
-1. **Dlib’s Face Recognition via `face_recognition` Library**
-2. **OpenCV’s YuNet (for face detection) + SFace (for recognition)**
+1. **Dlib's Face Recognition via `face_recognition` Library**
+2. **OpenCV's YuNet (for face detection) + SFace (for recognition)**
 3. **Classical LBPH (Local Binary Patterns Histograms) Approach**
 
 I chose the OpenCV approach using YuNet and SFace because of several advantages:
@@ -314,7 +559,7 @@ As a result, I opted to use the `face_recognition` library, which is built on Dl
 
 While integrating Blynk into the system, I initially chose not to follow the lab instructions. Instead, I tried using `blynklib>=0.2.6`—a newer-looking library that I thought would be more up-to-date. However, it didn't work as expected. I spent time troubleshooting the issue, suspecting it might be a problem with the template ID or Blynk configuration, but the system still failed to connect.
 
-Eventually, I reverted to the lab-provided method using a custom `BlynkLib.py` script (installed via a direct link). This worked perfectly. Through this process, I discovered that the `blynklib>=0.2.6` package hadn’t been maintained and lacked support for the newer Blynk IoT platform features or stable Legacy support.
+Eventually, I reverted to the lab-provided method using a custom `BlynkLib.py` script (installed via a direct link). This worked perfectly. Through this process, I discovered that the `blynklib>=0.2.6` package hadn't been maintained and lacked support for the newer Blynk IoT platform features or stable Legacy support.
 
 I also learned about the two versions of Blynk:
 
@@ -333,4 +578,4 @@ I also learned about the two versions of Blynk:
   - Comes with tiered plans (Free, Plus, Pro, Business)
   - More like the "VS Code + GitHub + CI/CD" of IoT—cloud-native and production-ready
 
-This journey helped me better understand Blynk’s evolution and its ecosystem, highlighting how project decisions must sometimes balance ease-of-use, reliability, and future scalability.
+This journey helped me better understand Blynk's evolution and its ecosystem, highlighting how project decisions must sometimes balance ease-of-use, reliability, and future scalability.

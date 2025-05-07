@@ -527,16 +527,6 @@ Potential improvements to the system include:
 - Mobile notifications for security alerts
 - Voice control integration
 
-## **License**
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## **Acknowledgements**
-
-- Face recognition powered by [face_recognition](https://github.com/ageitgey/face_recognition)
-- Tuya device control via [tinytuya](https://github.com/jasonacox/tinytuya)
-- IoT connectivity provided by [Blynk](https://blynk.io/)
-
 ## Development Insights and Decisions
 
 During the development of the facial recognition component, I initially intended to implement it locally for better performance and enhanced security—keeping facial data off the internet. After researching local face recognition solutions for the Raspberry Pi 4, I narrowed down three viable options:
@@ -579,3 +569,13 @@ I also learned about the two versions of Blynk:
   - More like the "VS Code + GitHub + CI/CD" of IoT—cloud-native and production-ready
 
 This journey helped me better understand Blynk's evolution and its ecosystem, highlighting how project decisions must sometimes balance ease-of-use, reliability, and future scalability.
+
+## **License**
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## **Acknowledgements**
+
+- Face recognition powered by [face_recognition](https://github.com/ageitgey/face_recognition)
+- Tuya device control via [tinytuya](https://github.com/jasonacox/tinytuya)
+- IoT connectivity provided by [Blynk](https://blynk.io/)

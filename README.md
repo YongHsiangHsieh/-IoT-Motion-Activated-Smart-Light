@@ -138,7 +138,7 @@ To control your smart light bulb via the local network, you need to retrieve its
 
 1. **Set up the light bulb using the Smart Life app:**
    - Download and install the **Smart Life** app on your phone.
-   - Ensure your phone is connected to the same **2.4GHz Wi-Fi network** as your Raspberry Pi.
+   - Ensure your phone is connected to the same **2.4GHz Wi-Fi network** as your smart light bulb.
    - Add the smart light bulb to the app by following the pairing instructions and entering your Wi-Fi password.
 
 2. **Create and configure a Tuya IoT Cloud project:**
@@ -156,7 +156,7 @@ To control your smart light bulb via the local network, you need to retrieve its
    - In the Tuya IoT platform, under your project’s **Devices** section, locate your light bulb.
    - Note down the **Device ID**, **Local IP Address**, and **Local Key**.
 
-5. **Use `tinytuya` to verify credentials on your Raspberry Pi:**
+5. **Use `tinytuya` to verify credentials on your Raspberry Pi, making sure it's on the same 2.4GHz Wi-Fi network as the smart light bulb:**
    - Run the wizard on your Pi:
      ```bash
      tinytuya wizard

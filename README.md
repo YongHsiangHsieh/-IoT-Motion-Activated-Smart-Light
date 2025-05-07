@@ -208,7 +208,6 @@ To control your smart light bulb via the local network, you need to retrieve its
    - Monitor the current light state
    - View the last recognized user
    - Switch between automatic and manual modes
-   - Control the light manually when in manual mode
 
 ## **Customization**
 

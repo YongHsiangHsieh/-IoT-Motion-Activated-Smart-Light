@@ -205,7 +205,7 @@ To control your smart light bulb via the local network, you need to retrieve its
 1. Download the Blynk IoT app on your smartphone
 2. Connect to your Blynk project using the auth token
 3. Use the app to:
-   - Monitor the current light state
+   - Monitor the current light state and color
    - View the last recognized user
    - Switch between automatic and manual modes
 
